@@ -10,8 +10,8 @@ on:
   pull_request:
     branches: ["main"]
 
+# CORRECT WAY: Use quotes for paths with spaces and special characters
 env:
-  # CORRECT WAY: Use quotes for paths with spaces and special characters
   APP_DIR: "Module 7 (Hour 49-56) Cloud-Native & DevOps/Hours-55"
 
 jobs:
@@ -25,13 +25,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.26.2"
-
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-go-
 
       - name: Run tests
         run: go test -v -race ./...
