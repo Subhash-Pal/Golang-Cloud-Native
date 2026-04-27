@@ -7,6 +7,7 @@ import (
 )
 
 func main() {
+	fmt.Println("Hello")
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		fmt.Println(scanner.Text()) // Println will add back the final '\n'
