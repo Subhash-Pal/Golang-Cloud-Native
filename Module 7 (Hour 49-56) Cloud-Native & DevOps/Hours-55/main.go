@@ -13,7 +13,7 @@ func newMux() *http.ServeMux {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"hour":  55,
-			"topic": "CI/CD pipeline setup",
+			"topic": "CI/CD pipeline setup:",
 			"checks": []string{
 				"go test",
 				"go build",
