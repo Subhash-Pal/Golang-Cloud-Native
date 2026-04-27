@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: module6-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - module6-postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: module6-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - module6-redis-data:/data
+
+volumes:
+  module6-postgres-data:
+  module6-redis-data:

@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-go-app
+spec:
+  replicas: 2          # Runs 2 copies for high availability
+  selector:
+    matchLabels:
+      app: my-go-app
+  template:
+    metadata:
+      labels:
+        app: my-go-app
+    spec:
+      containers:
+      - name: go-app-container
+        image: icorporatetrainer/my-go-app-image:v1
+        ports:
+        - containerPort: 8080

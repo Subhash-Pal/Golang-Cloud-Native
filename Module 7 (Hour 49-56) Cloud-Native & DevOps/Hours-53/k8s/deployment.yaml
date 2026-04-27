@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hour53-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hour53-api
+  template:
+    metadata:
+      labels:
+        app: hour53-api
+    spec:
+      containers:
+        - name: api
+          image: docker.io/library/hour53-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: hour53-config
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10

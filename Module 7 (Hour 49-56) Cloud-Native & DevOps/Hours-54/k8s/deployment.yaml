@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hour54-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hour54-api
+  template:
+    metadata:
+      labels:
+        app: hour54-api
+    spec:
+      containers:
+        - name: api
+          image: docker.io/library/hour54-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: STARTUP_DELAY_SECONDS
+              value: "8"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+            limits:
+              cpu: 300m

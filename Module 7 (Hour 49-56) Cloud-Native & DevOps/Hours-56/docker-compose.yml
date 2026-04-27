@@ -1,0 +1,7 @@
+services:
+  api:
+    build:
+      context: .
+    container_name: hour56-api
+    ports:
+      - "${HOST_PORT:-18056}:8080"

@@ -1,0 +1,6 @@
+ $token = $response.data.token
+PS D:\training_golang\Module 2 (Hour 9-16)REST APIs with Gin\Hour-14 File Upload + Error Handling (Gin)> curl.exe -X POST http://localhost:8080/api/upload `
+>> -H "Authorization: Bearer $token" `
+>> -F "file=@main.go" 
+{"success":false,"message":"Invalid file type"}
+PS D:\training_golang\Module 2 (Hour 9-16)REST APIs with Gin\Hour-14 File Upload + Error Handling (Gin)> 

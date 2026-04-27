@@ -1,0 +1,18 @@
+services:
+  quote-service:
+    build:
+      context: ./quote-service
+    container_name: hour51-quote-service
+    ports:
+      - "18061:8081"
+
+  api:
+    build:
+      context: ./api
+    container_name: hour51-api
+    depends_on:
+      - quote-service
+    environment:
+      QUOTE_SERVICE_URL: http://quote-service:8081/quote
+    ports:
+      - "18051:8080"

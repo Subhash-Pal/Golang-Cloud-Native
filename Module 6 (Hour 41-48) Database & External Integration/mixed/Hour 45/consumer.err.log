@@ -1,0 +1,3 @@
+2026/04/19 10:50:17 Consumer is listening on channel "hour45_orders"
+2026/04/19 10:50:37 receive message: timed out waiting for notification
+exit status 1
