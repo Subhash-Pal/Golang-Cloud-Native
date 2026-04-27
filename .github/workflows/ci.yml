@@ -1,6 +1,5 @@
 name: CI/CD Pipeline
 
-# Required for April 2026 security compliance
 permissions:
   contents: read
   packages: write
@@ -12,64 +11,33 @@ on:
     branches: ["main"]
 
 env:
-  # Store the complex path once to avoid repetition
-  APP_DIR: Module\ 7\ \(Hour\ 49-56\)\ Cloud-Native\ \&\ DevOps/Hours-55
+  # CORRECT WAY: Use quotes for paths with spaces and special characters
+  APP_DIR: "Module 7 (Hour 49-56) Cloud-Native & DevOps/Hours-55"
 
 jobs:
   test:
-    name: Test Application
     runs-on: ubuntu-latest
-    
     steps:
-      - name: 🛎️ Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: ⚙️ Setup Go Environment
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.26.2"
 
-      - name: 📦 Cache Go Modules
+      - name: Cache Go modules
         uses: actions/cache@v3
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: ${{ runner.os }}-go-
 
-      - name: 🧪 Run Tests with Race Detection
+      - name: Run tests
         run: go test -v -race ./...
+        # CORRECT WAY: Reference the environment variable
         working-directory: ${{ env.APP_DIR }}
 
-      - name: 🏗️ Build Application
+      - name: Build application
         run: go build -v .
         working-directory: ${{ env.APP_DIR }}
-
-  build:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    needs: test
-    # Only run on main branch pushes (not PRs)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    steps:
-      - name: 🛎️ Checkout Code
-        uses: actions/checkout@v4
-
-      - name: ⚙️ Set Up Docker Build Environment
-        uses: docker/setup-buildx-action@v2
-
-      - name: 🔑 Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🐳 Build and Push Docker Image
-        uses: docker/build-push-action@v4
-        with:
-          context: ${{ env.APP_DIR }}
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}/hour55-ci-api:latest
-            ghcr.io/${{ github.repository }}/hour55-ci-api:${{ github.sha }}
