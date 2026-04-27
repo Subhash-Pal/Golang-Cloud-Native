@@ -1,6 +1,6 @@
 # go-cd-demo
 
-A small Go demo that shows a full CI/CD flow into Kubernetes.
+A small Golang demo that shows a full CI/CD flow into Kubernetes.
 
 ## Services
 
