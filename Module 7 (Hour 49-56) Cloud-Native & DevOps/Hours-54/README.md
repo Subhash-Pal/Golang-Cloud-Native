@@ -27,6 +27,10 @@ http://localhost:18454/readyz
 http://localhost:18454/metrics
 ```
 
+The local runner now builds a stable `.bin\hour54-api.exe` and starts that binary instead of using `go run`, which helps on machines where Windows App Control blocks temporary Go build-cache executables.
+
+`/readyz` is expected to return `503` briefly during the startup warm-up window and then switch to `200`.
+
 ## Run Docker Verification
 
 ```powershell
@@ -43,8 +47,9 @@ powershell -ExecutionPolicy Bypass -File .\run-k8s.ps1
 
 The Kubernetes runner now:
 
-- builds `hour54-api`
-- confirms the Docker Desktop Kubernetes node can see `docker.io/library/hour54-api:latest`
+- builds `hour54-api` and tags `docker.io/library/hour54-api:latest`
+- auto-loads the image into `minikube` or `kind` when those contexts are active
+- checks Docker Desktop image visibility when the active context is `docker-desktop`
 - applies the manifests
 - waits for the deployment to become available
 
@@ -72,7 +77,7 @@ http://localhost:8080/readyz
 http://localhost:8080/metrics
 ```
 
-If the pods show `ErrImageNeverPull` or `ImagePullBackOff`, the cluster cannot see the local image yet. Check:
+If the deployment does not become available, check:
 
 ```powershell
 kubectl describe pod -l app=hour54-api

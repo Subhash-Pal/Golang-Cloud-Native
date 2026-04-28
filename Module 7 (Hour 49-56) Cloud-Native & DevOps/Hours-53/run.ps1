@@ -24,8 +24,65 @@ function Remove-DockerImageIfExists {
     }
 }
 
+function Build-LocalBinary {
+    param([string]$BinaryName)
+
+    $binDir = Join-Path $PSScriptRoot ".bin"
+    if (-not (Test-Path $binDir)) {
+        New-Item -ItemType Directory -Path $binDir | Out-Null
+    }
+
+    $binaryPath = Join-Path $binDir "${BinaryName}.exe"
+    Write-Host "Building local binary at $binaryPath"
+    go build -o $binaryPath .
+    if ($LASTEXITCODE -ne 0) { throw "go build failed." }
+
+    return $binaryPath
+}
+
+function Get-CurrentKubernetesContext {
+    $context = kubectl config current-context 2>$null
+    if ($LASTEXITCODE -ne 0) { throw "kubectl context check failed." }
+    return $context.Trim()
+}
+
+function Import-ImageToCluster {
+    param(
+        [string]$ImageRef,
+        [string]$ContextName
+    )
+
+    if ($ContextName -eq "minikube") {
+        Write-Host "Loading $ImageRef into minikube"
+        minikube image load $ImageRef
+        if ($LASTEXITCODE -ne 0) { throw "minikube image load failed." }
+        return
+    }
+
+    if ($ContextName -like "kind-*") {
+        $clusterName = $ContextName.Substring(5)
+        Write-Host "Loading $ImageRef into kind cluster $clusterName"
+        kind load docker-image $ImageRef --name $clusterName
+        if ($LASTEXITCODE -ne 0) { throw "kind load docker-image failed." }
+        return
+    }
+
+    if ($ContextName -eq "docker-desktop") {
+        Write-Host "Checking Docker Desktop cluster image visibility"
+        docker exec docker-desktop-control-plane crictl images | findstr "hour53-api"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Docker Desktop cluster cannot see $ImageRef."
+        }
+        return
+    }
+
+    Write-Host "No automatic image import is configured for context '$ContextName'."
+    Write-Host "The deployment will use $ImageRef and relies on the cluster being able to access that image."
+}
+
 function Run-DockerVerification {
     $imageName = "hour53-api"
+    $imageRef = "docker.io/library/hour53-api:latest"
     $containerName = "hour53-api-test"
     $url = "http://localhost:18053/config"
 
@@ -34,7 +91,7 @@ function Run-DockerVerification {
 
     try {
         Write-Host "Building Docker image $imageName"
-        docker build -t $imageName .
+        docker build -t $imageName -t $imageRef .
         if ($LASTEXITCODE -ne 0) { throw "Docker build failed." }
 
         Write-Host "Starting verification container on http://localhost:18053"
@@ -50,6 +107,7 @@ function Run-DockerVerification {
         Write-Host "Cleaning up container and image"
         Remove-DockerContainerIfExists -Name $containerName
         Remove-DockerImageIfExists -Name $imageName
+        Remove-DockerImageIfExists -Name $imageRef
     }
 }
 
@@ -63,6 +121,7 @@ function Test-KubernetesAvailable {
 }
 
 function Run-KubernetesApply {
+    $imageName = "hour53-api"
     $imageRef = "docker.io/library/hour53-api:latest"
 
     Write-Host "Checking kubectl client"
@@ -70,20 +129,18 @@ function Run-KubernetesApply {
     if ($LASTEXITCODE -ne 0) { throw "kubectl client check failed." }
 
     Write-Host "Checking current Kubernetes context"
-    kubectl config current-context
-    if ($LASTEXITCODE -ne 0) { throw "kubectl context check failed." }
+    $contextName = Get-CurrentKubernetesContext
+    Write-Host $contextName
 
     Write-Host "Checking cluster connectivity"
     kubectl get nodes
     if ($LASTEXITCODE -ne 0) { throw "kubectl cannot reach the cluster." }
 
-    Write-Host "Building Docker image hour53-api for Kubernetes"
-    docker build -t hour53-api .
+    Write-Host "Building Docker image $imageName for Kubernetes"
+    docker build -t $imageName -t $imageRef .
     if ($LASTEXITCODE -ne 0) { throw "Docker build failed for Kubernetes mode." }
 
-    Write-Host "Confirming Kubernetes node can see $imageRef"
-    docker exec desktop-control-plane ctr -n k8s.io images ls | findstr "docker.io/library/hour53-api:latest"
-    if ($LASTEXITCODE -ne 0) { throw "Kubernetes node runtime cannot see $imageRef." }
+    Import-ImageToCluster -ImageRef $imageRef -ContextName $contextName
 
     Write-Host "Applying Kubernetes manifests"
     kubectl apply -f .\k8s\
@@ -99,11 +156,11 @@ function Run-KubernetesApply {
     kubectl get svc
     kubectl get configmap hour53-config
 
-    kubectl wait --for=condition=available deployment/hour53-api --timeout=30s
+    kubectl wait --for=condition=available deployment/hour53-api --timeout=60s
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Deployment did not become available within 30 seconds."
-        Write-Host "If you see ErrImageNeverPull or ImagePullBackOff, the cluster cannot see the local image yet."
-        Write-Host "Check details with: kubectl describe pod -l app=hour53-api"
+        Write-Host "Deployment did not become available within 60 seconds."
+        Write-Host "Check pod details with: kubectl describe pod -l app=hour53-api"
+        throw "Deployment verification failed."
     }
 
     Write-Host "To test locally from Kubernetes, run: kubectl port-forward svc/hour53-api 8080:80"
@@ -127,9 +184,10 @@ switch ($Mode) {
         $env:APP_MODE = "development"
         $env:LOG_LEVEL = "debug"
         $env:PORT = "18453"
+        $binaryPath = Build-LocalBinary -BinaryName "hour53-api"
         Write-Host "Running Hour 53 locally on http://localhost:18453"
         Write-Host "Endpoints: /  /config  /healthz"
-        go run .
+        & $binaryPath
     }
     "docker" {
         Run-DockerVerification

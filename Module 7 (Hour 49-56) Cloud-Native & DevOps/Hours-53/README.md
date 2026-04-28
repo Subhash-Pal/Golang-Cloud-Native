@@ -21,6 +21,8 @@ powershell -ExecutionPolicy Bypass -File .\run-full.ps1
 
 This runs Docker verification first and then runs the Kubernetes apply flow if your cluster is reachable.
 
+The local runner now builds a stable `.bin\hour53-api.exe` and starts that binary instead of using `go run`, which helps on machines where Windows App Control blocks temporary Go build-cache executables.
+
 ## Run Local
 
 ```powershell
@@ -49,8 +51,9 @@ powershell -ExecutionPolicy Bypass -File .\run-k8s.ps1
 
 The Kubernetes runner now:
 
-- builds `hour53-api`
-- confirms the Docker Desktop Kubernetes node can see `docker.io/library/hour53-api:latest`
+- builds `hour53-api` and tags `docker.io/library/hour53-api:latest`
+- auto-loads the image into `minikube` or `kind` when those contexts are active
+- checks Docker Desktop image visibility when the active context is `docker-desktop`
 - applies the manifests
 - waits for the deployment to become available
 
@@ -77,7 +80,7 @@ http://localhost:8080/config
 http://localhost:8080/healthz
 ```
 
-If the pods show `ErrImageNeverPull` or `ImagePullBackOff`, the cluster cannot see the local image yet. Check:
+If the deployment does not become available, check:
 
 ```powershell
 kubectl describe pod -l app=hour53-api
